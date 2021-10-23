@@ -75,13 +75,15 @@ class AuthPage extends Component {
             resData.data.login.tokenExpiration
           );
         }
-        console.log(resData);
+        // console.log(
+        //   `The value of context from auth ${JSON.stringify(this.context)}`
+        // );
       })
       .catch((err) => {
         console.log(err);
       });
 
-    console.log(email, password);
+    // console.log(email, password);
   };
 
   switchModeHandler = (e) => {

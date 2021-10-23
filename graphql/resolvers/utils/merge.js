@@ -1,22 +1,33 @@
+const DataLoader = require('dataloader');
+
 const Event = require('../../../models/event');
 const User = require('../../../models/user');
 
 const { dateToString } = require('../../../helpers/date');
+const { events } = require('../../../models/event');
 
-const user = (userId) => {
+const eventLoader = new DataLoader((eventIds) => {
+  return eventsFunc(eventIds);
+});
+
+const userLoader = new DataLoader((userIds) => {
+  return User.find({ _id: { $in: userIds } });
+});
+
+const user = async (userId) => {
   //   console.log('The id is ', userId);
-  return User.findById(userId)
-    .then((user) => {
-      //   console.log('The User profile', user);
-      return {
-        ...user._doc,
-        _id: user.id,
-        createdEvents: eventsFunc.bind(this, user.createdEvents),
-      };
-    })
-    .catch((err) => {
-      throw err;
-    });
+  // return User.findById(userId)
+
+  try {
+    const user = await userLoader.load(userId.toString());
+    return {
+      ...user._doc,
+      _id: user.id,
+      createdEvents: eventLoader.load.bind(this, user._doc.createdEvents),
+    };
+  } catch (error) {
+    throw new Error(error);
+  }
 };
 
 const eventsFunc = (eventIds) => {
@@ -37,12 +48,13 @@ const eventsFunc = (eventIds) => {
 
 const singleEvent = async (eventId) => {
   try {
-    const event = await Event.findById(eventId);
+    const event = await eventLoader.load(eventId);
     return transformEvent(event);
   } catch (error) {}
 };
 
 const transformEvent = (event) => {
+  console.log('From transform event merge js', event);
   return {
     ...event._doc,
     _id: event.id,
@@ -55,7 +67,7 @@ const transformBooking = (booking) => {
   return {
     ...booking._doc,
     _id: booking.id,
-    user: user.bind(this, booking._doc.user),
+    user: userLoader.load.bind(this, booking._doc.user),
     event: singleEvent.bind(this, booking._doc.event),
     createdAt: new Date(booking._doc.createdAt).toISOString(),
     updatedAt: new Date(booking._doc.updatedAt).toISOString(),
